@@ -64,13 +64,14 @@
             <button onclick="ingresarAdmin()" class="btn-admin">Entrar como Admin</button>
         </div>
 
-        <!-- SECCIÓN 5: PANEL DE CONTROL ADMIN -->
+<!-- SECCIÓN 5: PANEL DE CONTROL ADMIN -->
         <div class="card" id="card-admin-panel" style="display: none; background: #fff3cd; border: 1px solid #ffeeba;">
             <h2>⚙️ Control de Administrador</h2>
             <p style="font-size: 14px; color: #856404;">Aquí puedes gestionar el estado del sorteo.</p>
             
             <button onclick="realizarSorteo()" style="background: #007bff; margin-bottom: 10px;">Realizar / Regenerar Sorteo</button>
             <button onclick="toggleInscripciones()" id="btn-toggle-inscripciones" style="background: #dc3545; margin-bottom: 10px;">Cerrar / Abrir Inscripciones</button>
+            <button onclick="reiniciarTodoSorteo()" style="background: #343a40; margin-bottom: 10px; color: #ffc107; border: 1px dashed #ffc107;">🗑️ Borrar y Reiniciar Todo el Sorteo</button>
             <button onclick="cerrarAdmin()" style="background: #6c757d;">Salir de Admin</button>
         </div>
     </div>
