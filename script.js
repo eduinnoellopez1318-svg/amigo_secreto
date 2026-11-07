@@ -303,7 +303,7 @@ function cerrarAdmin() {
     document.getElementById('admin-pin').value = '';
     document.getElementById('card-admin-panel').style.display = 'none';
     document.getElementById('card-admin-login').style.display = 'block';
-    document.getElementById('lista-participantes-admin').innerHTML = ''; // Limpiar lista al salir
+    document.getElementById('lista-participantes-admin').innerHTML = '';
 }
 
 async function realizarSorteo() {
@@ -367,7 +367,6 @@ async function toggleInscripciones() {
     }
 }
 
-// NUEVA FUNCIÓN: Ver lista de participantes inscritos
 async function verParticipantes() {
     const { data: participantes, error } = await supabaseClient
         .from('amigos')
@@ -422,7 +421,7 @@ async function reiniciarTodoSorteo() {
         alert('Error inesperado al reiniciar: ' + e.message);
     }
 }
-// Funciones para mostrar u ocultar el acceso de administración discretamente
+
 function mostrarAdminLogin(event) {
     event.preventDefault();
     document.getElementById('card-admin-login').style.display = 'block';
@@ -431,5 +430,4 @@ function mostrarAdminLogin(event) {
 function ocultarAdminLogin() {
     document.getElementById('admin-pin').value = '';
     document.getElementById('card-admin-login').style.display = 'none';
-}
 }
