@@ -7,16 +7,44 @@ let usuarioActual = null;
 let listaArchivosSeleccionados = [];
 const PIN_ADMIN = '132118';
 
-// Funciones de cifrado básico para ocultar el PIN y el amigo asignado en la base de datos
 function cifrarTexto(texto) {
-    return btoa(encodeURIComponent(texto)); // Codifica en Base64 seguro
+    return btoa(encodeURIComponent(texto));
 }
 
 function descifrarTexto(textoCifrado) {
     try {
         return decodeURIComponent(atob(textoCifrado));
     } catch (e) {
-        return textoCifrado; // Por si algún dato antiguo no estaba cifrado
+        return textoCifrado;
+    }
+}
+
+// Al cargar la página, verificamos si las inscripciones están cerradas
+window.addEventListener('DOMContentLoaded', async () => {
+    verificarInscripcionesYMostrarRegistro();
+});
+
+async function verificarInscripcionesYMostrarRegistro() {
+    const { data: config } = await supabaseClient
+        .from('configuracion')
+        .select('*')
+        .eq('clave', 'inscripciones_cerradas')
+        .single();
+
+    const cardRegistro = document.getElementById('card-registro');
+    const cardLogin = document.getElementById('card-login');
+    const btnVolverRegistro = document.getElementById('btn-volver-registro');
+
+    if (config && config.valor === 'true') {
+        // Inscripciones cerradas: ocultamos registro y forzamos el login
+        cardRegistro.style.display = 'none';
+        cardLogin.style.display = 'block';
+        btnVolverRegistro.style.display = 'none'; // No permite volver al registro
+    } else {
+        // Inscripciones abiertas
+        cardRegistro.style.display = 'block';
+        cardLogin.style.display = 'none';
+        btnVolverRegistro.style.display = 'block';
     }
 }
 
@@ -26,7 +54,8 @@ function mostrarSeccion(tipo) {
     document.getElementById('card-panel').style.display = 'none';
 
     if (tipo === 'registro') {
-        document.getElementById('card-registro').style.display = 'block';
+        // Verificar antes de mostrar por si acaso
+        verificarInscripcionesYMostrarRegistro();
     } else if (tipo === 'consulta') {
         document.getElementById('card-login').style.display = 'block';
     } else if (tipo === 'panel') {
@@ -34,7 +63,6 @@ function mostrarSeccion(tipo) {
     }
 }
 
-// 1. Registro inicial
 async function registrarUsuario() {
     const nombreOriginal = document.getElementById('reg-nombre').value.trim();
     const nombre = nombreOriginal.toLowerCase();
@@ -53,10 +81,10 @@ async function registrarUsuario() {
 
     if (config && config.valor === 'true') {
         alert('Lo sentimos, las inscripciones ya han sido cerradas por el administrador.');
+        verificarInscripcionesYMostrarRegistro();
         return;
     }
 
-    // Verificar si ya existe el nombre exacto en minúsculas
     const { data: existente } = await supabaseClient
         .from('amigos')
         .select('*')
@@ -69,7 +97,6 @@ async function registrarUsuario() {
         return;
     }
 
-    // Ciframos el PIN antes de guardarlo para que sea secreto en la BD
     const pinCifrado = cifrarTexto(pinPlano);
 
     const { error } = await supabaseClient
@@ -86,7 +113,6 @@ async function registrarUsuario() {
     }
 }
 
-// 2. Iniciar sesión al panel personal
 async function ingresarPanel() {
     const nombre = document.getElementById('login-nombre').value.trim().toLowerCase();
     const pinPlano = document.getElementById('login-pin').value.trim();
@@ -96,7 +122,6 @@ async function ingresarPanel() {
         return;
     }
 
-    // Traemos al usuario por nombre y comparamos el PIN descifrado
     const { data, error } = await supabaseClient
         .from('amigos')
         .select('*')
@@ -226,7 +251,6 @@ async function verificarResultadoPanel() {
         return;
     }
 
-    // Desciframos el nombre del amigo asignado para mostrarlo en pantalla
     const amigoSecretoNombre = descifrarTexto(usuarioActual.amigo_asignado);
 
     const { data: amigoData } = await supabaseClient
@@ -263,7 +287,7 @@ function cerrarSesion() {
     document.getElementById('login-pin').value = '';
     document.getElementById('panel-deseos').value = '';
     document.getElementById('grid-previsualizacion').innerHTML = '';
-    mostrarSeccion('consulta');
+    verificarInscripcionesYMostrarRegistro();
 }
 
 // --- FUNCIONES DE ADMINISTRACIÓN ---
@@ -308,7 +332,6 @@ async function realizarSorteo() {
         }
     }
 
-    // Guardamos el amigo asignado totalmente cifrado (secreto) en la base de datos
     for (let i = 0; i < participantes.length; i++) {
         const asignadoCifrado = cifrarTexto(asignados[i]);
         await supabaseClient
@@ -328,7 +351,7 @@ async function toggleInscripciones() {
         .single();
 
     let nuevoEstado = 'true';
-    let mensaje = 'Inscripciones CERRADAS. Nadie más podrá registrarse.';
+    let mensaje = 'Inscripciones CERRADAS. La tarjeta de registro ha sido ocultada.';
 
     if (data && data.valor === 'true') {
         nuevoEstado = 'false';
@@ -340,8 +363,9 @@ async function toggleInscripciones() {
         .upsert([{ clave: 'inscripciones_cerradas', valor: nuevoEstado }], { onConflict: ['clave'] });
 
     if (error) {
-        alert('Error al cambiar el estado.');
+        alert('Error al cambiar el estado. Asegúrate de haber creado la tabla "configuracion" en Supabase.');
     } else {
         alert(mensaje);
+        verificarInscripcionesYMostrarRegistro();
     }
 }
