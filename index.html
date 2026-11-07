@@ -12,7 +12,7 @@
     <div class="container">
         <h1>🎄 Sorteo Amigo Secreto 🎁</h1>
         
-        <!-- SECCIÓN 1: REGISTRO INICIAL (Solo Nombre y PIN) -->
+        <!-- SECCIÓN 1: REGISTRO INICIAL -->
         <div class="card" id="card-registro">
             <h2>Regístrate al Sorteo</h2>
             <p style="font-size: 14px; color: #666;">Inscríbete primero. Después podrás agregar tu lista de regalos.</p>
@@ -24,7 +24,7 @@
             </p>
         </div>
 
-        <!-- SECCIÓN 2: ACCESO / LOGIN AL PANEL PERSONAL -->
+        <!-- SECCIÓN 2: LOGIN AL PANEL PERSONAL -->
         <div class="card" id="card-login" style="display: none;">
             <h2>Mi Panel de Regalos</h2>
             <input type="text" id="login-nombre" placeholder="Tu Nombre">
@@ -33,7 +33,7 @@
             <button onclick="mostrarSeccion('registro')" class="btn-secundario" style="margin-top: 10px; background: #6c757d;">Volver al Registro</button>
         </div>
 
-        <!-- SECCIÓN 3: PANEL PRIVADO DEL USUARIO (Actualizar deseos y ver resultado) -->
+        <!-- SECCIÓN 3: PANEL PRIVADO DEL USUARIO -->
         <div class="card" id="card-panel" style="display: none;">
             <h2>Hola, <span id="span-nombre-usuario"></span> 👋</h2>
             
@@ -41,10 +41,13 @@
                 <h3>Actualizar mi Lista de Regalos</h3>
                 <textarea id="panel-deseos" placeholder="Escribe o actualiza tu lista de deseos..."></textarea>
                 
-                <label for="panel-foto" style="font-size: 14px; color: #666; display: block; margin-top: 10px;">Subir o cambiar foto de referencia:</label>
-                <input type="file" id="panel-foto" accept="image/*">
+                <label for="panel-fotos" style="font-size: 14px; color: #666; display: block; margin-top: 10px;">Sube fotos de referencia (máximo 5):</label>
+                <input type="file" id="panel-fotos" accept="image/*" multiple onchange="previsualizarFotos(event)">
                 
-                <button onclick="guardarDeseos()" style="margin-top: 10px; background: #ffc107; color: #000;">Guardar Cambios</button>
+                <!-- Contenedor de tarjetas previas -->
+                <div id="grid-previsualizacion" class="grid-tarjetas"></div>
+
+                <button onclick="guardarDeseos()" style="margin-top: 15px; background: #ffc107; color: #000;">Guardar Cambios</button>
             </div>
 
             <div style="background: #e9ecef; padding: 15px; border-radius: 8px;">
@@ -55,7 +58,7 @@
             <button onclick="cerrarSesion()" style="margin-top: 20px; background: #dc3545;">Cerrar Sesión</button>
         </div>
 
-        <!-- SECCIÓN 4: PANEL DE ADMINISTRACIÓN (Para realizar el sorteo) -->
+        <!-- SECCIÓN 4: ADMINISTRACIÓN -->
         <div class="card admin-section">
             <h2>Panel de Administración</h2>
             <button onclick="realizarSorteo()" class="btn-admin">Realizar Sorteo Aleatorio</button>
