@@ -12,7 +12,7 @@
     <div class="container">
         <h1>🎄 Sorteo Amigo Secreto 🎁</h1>
         
-        <!-- SECCIÓN 1: REGISTRO INICIAL -->
+        <!-- SECCIÓN 1: REGISTRO INICIAL (Se oculta si el admin cierra inscripciones) -->
         <div class="card" id="card-registro">
             <h2>Regístrate al Sorteo</h2>
             <p style="font-size: 14px; color: #666;">Inscríbete primero. Después podrás agregar tu lista de regalos.</p>
@@ -30,7 +30,7 @@
             <input type="text" id="login-nombre" placeholder="Tu Nombre">
             <input type="password" id="login-pin" placeholder="Tu PIN secreto">
             <button onclick="ingresarPanel()">Entrar a mi Panel</button>
-            <button onclick="mostrarSeccion('registro')" class="btn-secundario" style="margin-top: 10px; background: #6c757d;">Volver al Registro</button>
+            <button onclick="verificarInscripcionesYMostrarRegistro()" id="btn-volver-registro" class="btn-secundario" style="margin-top: 10px; background: #6c757d; display: none;">Volver al Registro</button>
         </div>
 
         <!-- SECCIÓN 3: PANEL PRIVADO DEL USUARIO -->
@@ -64,7 +64,7 @@
             <button onclick="ingresarAdmin()" class="btn-admin">Entrar como Admin</button>
         </div>
 
-        <!-- SECCIÓN 5: PANEL DE CONTROL ADMIN (Oculto hasta ingresar) -->
+        <!-- SECCIÓN 5: PANEL DE CONTROL ADMIN -->
         <div class="card" id="card-admin-panel" style="display: none; background: #fff3cd; border: 1px solid #ffeeba;">
             <h2>⚙️ Control de Administrador</h2>
             <p style="font-size: 14px; color: #856404;">Aquí puedes gestionar el estado del sorteo.</p>
