@@ -44,7 +44,6 @@
                 <label for="panel-fotos" style="font-size: 14px; color: #666; display: block; margin-top: 10px;">Sube fotos de referencia (máximo 5):</label>
                 <input type="file" id="panel-fotos" accept="image/*" multiple onchange="previsualizarFotos(event)">
                 
-                <!-- Contenedor de tarjetas previas -->
                 <div id="grid-previsualizacion" class="grid-tarjetas"></div>
 
                 <button onclick="guardarDeseos()" style="margin-top: 15px; background: #ffc107; color: #000;">Guardar Cambios</button>
@@ -58,10 +57,21 @@
             <button onclick="cerrarSesion()" style="margin-top: 20px; background: #dc3545;">Cerrar Sesión</button>
         </div>
 
-        <!-- SECCIÓN 4: ADMINISTRACIÓN -->
-        <div class="card admin-section">
+        <!-- SECCIÓN 4: ACCESO ADMIN -->
+        <div class="card" id="card-admin-login">
             <h2>Panel de Administración</h2>
-            <button onclick="realizarSorteo()" class="btn-admin">Realizar Sorteo Aleatorio</button>
+            <input type="password" id="admin-pin" placeholder="PIN de Administrador">
+            <button onclick="ingresarAdmin()" class="btn-admin">Entrar como Admin</button>
+        </div>
+
+        <!-- SECCIÓN 5: PANEL DE CONTROL ADMIN (Oculto hasta ingresar) -->
+        <div class="card" id="card-admin-panel" style="display: none; background: #fff3cd; border: 1px solid #ffeeba;">
+            <h2>⚙️ Control de Administrador</h2>
+            <p style="font-size: 14px; color: #856404;">Aquí puedes gestionar el estado del sorteo.</p>
+            
+            <button onclick="realizarSorteo()" style="background: #007bff; margin-bottom: 10px;">Realizar / Regenerar Sorteo</button>
+            <button onclick="toggleInscripciones()" id="btn-toggle-inscripciones" style="background: #dc3545; margin-bottom: 10px;">Cerrar / Abrir Inscripciones</button>
+            <button onclick="cerrarAdmin()" style="background: #6c757d;">Salir de Admin</button>
         </div>
     </div>
 
