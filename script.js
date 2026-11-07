@@ -19,7 +19,6 @@ function descifrarTexto(textoCifrado) {
     }
 }
 
-// Al cargar la página, verificamos si las inscripciones están cerradas
 window.addEventListener('DOMContentLoaded', async () => {
     verificarInscripcionesYMostrarRegistro();
 });
@@ -36,15 +35,13 @@ async function verificarInscripcionesYMostrarRegistro() {
     const btnVolverRegistro = document.getElementById('btn-volver-registro');
 
     if (config && config.valor === 'true') {
-        // Inscripciones cerradas: ocultamos registro y forzamos el login
-        cardRegistro.style.display = 'none';
-        cardLogin.style.display = 'block';
-        btnVolverRegistro.style.display = 'none'; // No permite volver al registro
+        if (cardRegistro) cardRegistro.style.display = 'none';
+        if (cardLogin) cardLogin.style.display = 'block';
+        if (btnVolverRegistro) btnVolverRegistro.style.display = 'none';
     } else {
-        // Inscripciones abiertas
-        cardRegistro.style.display = 'block';
-        cardLogin.style.display = 'none';
-        btnVolverRegistro.style.display = 'block';
+        if (cardRegistro) cardRegistro.style.display = 'block';
+        if (cardLogin) cardLogin.style.display = 'none';
+        if (btnVolverRegistro) btnVolverRegistro.style.display = 'block';
     }
 }
 
@@ -54,7 +51,6 @@ function mostrarSeccion(tipo) {
     document.getElementById('card-panel').style.display = 'none';
 
     if (tipo === 'registro') {
-        // Verificar antes de mostrar por si acaso
         verificarInscripcionesYMostrarRegistro();
     } else if (tipo === 'consulta') {
         document.getElementById('card-login').style.display = 'block';
@@ -363,9 +359,42 @@ async function toggleInscripciones() {
         .upsert([{ clave: 'inscripciones_cerradas', valor: nuevoEstado }], { onConflict: ['clave'] });
 
     if (error) {
-        alert('Error al cambiar el estado. Asegúrate de haber creado la tabla "configuracion" en Supabase.');
+        alert('Error al cambiar el estado.');
     } else {
         alert(mensaje);
         verificarInscripcionesYMostrarRegistro();
+    }
+}
+
+// --- FUNCIÓN CON DOBLE CONFIRMACIÓN PARA BORRAR TODO EL SORTEO ---
+async function reiniciarTodoSorteo() {
+    // Primera confirmación
+    const confirmar1 = confirm('⚠️ ADVERTENCIA: ¿Estás seguro de que deseas eliminar TODOS los participantes, listas de deseos y reiniciar el sorteo por completo?');
+    if (!confirmar1) return;
+
+    // Segunda confirmación estricta
+    const confirmar2 = confirm('🔴 ÚLTIMA ADVERTENCIA: Esta acción no se puede deshacer. Se borrará toda la base de datos del sorteo. ¿Deseas continuar?');
+    if (!confirmar2) return;
+
+    try {
+        // Borrar todos los registros de la tabla amigos
+        const { error: errorAmigos } = await supabaseClient
+            .from('amigos')
+            .delete()
+            .neq('id', 0); // Borra todas las filas
+
+        // Reabrir inscripciones automáticamente borrando la configuración o poniéndolas en falso
+        await supabaseClient
+            .from('configuracion')
+            .upsert([{ clave: 'inscripciones_cerradas', valor: 'false' }], { onConflict: ['clave'] });
+
+        if (errorAmigos) {
+            alert('Hubo un error al limpiar los datos: ' + errorAmigos.message);
+        } else {
+            alert('✨ ¡El sorteo se ha reiniciado y borrado por completo con éxito!');
+            location.reload(); // Recarga la página para dejarla limpia
+        }
+    } catch (e) {
+        alert('Error inesperado al reiniciar: ' + e.message);
     }
 }
