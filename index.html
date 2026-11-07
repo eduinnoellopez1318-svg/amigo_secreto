@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteo Amigo Secreto</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Librería de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🎄 Sorteo Amigo Secreto 🎁</h1>
+        
+        <div class="card">
+            <h2>Regístrate</h2>
+            <input type="text" id="nombre" placeholder="Tu Nombre">
+            <textarea id="deseos" placeholder="Escribe tu lista de deseos (regalos que te gustaría recibir)..."></textarea>
+            <input type="password" id="pin" placeholder="Crea un PIN secreto (para ver tu resultado luego)">
+            <button onclick="registrarParticipante()">Inscribirme</button>
+        </div>
+
+        <div class="card">
+            <h2>Consultar Mi Amigo Secreto</h2>
+            <input type="text" id="consulta-nombre" placeholder="Tu Nombre">
+            <input type="password" id="consulta-pin" placeholder="Tu PIN secreto">
+            <button onclick="consultarResultado()">Ver mi Amigo Secreto</button>
+            <div id="resultado" class="resultado"></div>
+        </div>
+
+        <div class="card admin-section">
+            <h2>Panel de Administración</h2>
+            <button onclick="realizarSorteo()" class="btn-admin">Realizar Sorteo Aleatorio</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
