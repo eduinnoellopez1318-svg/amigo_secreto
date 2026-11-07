@@ -12,26 +12,50 @@
     <div class="container">
         <h1>🎄 Sorteo Amigo Secreto 🎁</h1>
         
-        <div class="card">
-            <h2>Regístrate</h2>
-            <input type="text" id="nombre" placeholder="Tu Nombre">
-            <textarea id="deseos" placeholder="Escribe tu lista de deseos (regalos que te gustaría recibir)..."></textarea>
-            
-            <label for="foto" style="font-size: 14px; color: #666; display: block; margin-top: 10px;">Sube una foto de referencia (opcional):</label>
-            <input type="file" id="foto" accept="image/*">
-            
-            <input type="password" id="pin" placeholder="Crea un PIN secreto (para ver tu resultado luego)">
-            <button onclick="registrarParticipante()">Inscribirme</button>
+        <!-- SECCIÓN 1: REGISTRO INICIAL (Solo Nombre y PIN) -->
+        <div class="card" id="card-registro">
+            <h2>Regístrate al Sorteo</h2>
+            <p style="font-size: 14px; color: #666;">Inscríbete primero. Después podrás agregar tu lista de regalos.</p>
+            <input type="text" id="reg-nombre" placeholder="Tu Nombre">
+            <input type="password" id="reg-pin" placeholder="Crea un PIN secreto">
+            <button onclick="registrarUsuario()">Inscribirme</button>
+            <p style="text-align: center; margin-top: 15px; font-size: 14px;">
+                ¿Ya estás inscrito? <a href="#" onclick="mostrarSeccion('consulta')">Ingresa a tu panel aquí</a>
+            </p>
         </div>
 
-        <div class="card">
-            <h2>Consultar Mi Amigo Secreto</h2>
-            <input type="text" id="consulta-nombre" placeholder="Tu Nombre">
-            <input type="password" id="consulta-pin" placeholder="Tu PIN secreto">
-            <button onclick="consultarResultado()">Ver mi Amigo Secreto</button>
-            <div id="resultado" class="resultado"></div>
+        <!-- SECCIÓN 2: ACCESO / LOGIN AL PANEL PERSONAL -->
+        <div class="card" id="card-login" style="display: none;">
+            <h2>Mi Panel de Regalos</h2>
+            <input type="text" id="login-nombre" placeholder="Tu Nombre">
+            <input type="password" id="login-pin" placeholder="Tu PIN secreto">
+            <button onclick="ingresarPanel()">Entrar a mi Panel</button>
+            <button onclick="mostrarSeccion('registro')" class="btn-secundario" style="margin-top: 10px; background: #6c757d;">Volver al Registro</button>
         </div>
 
+        <!-- SECCIÓN 3: PANEL PRIVADO DEL USUARIO (Actualizar deseos y ver resultado) -->
+        <div class="card" id="card-panel" style="display: none;">
+            <h2>Hola, <span id="span-nombre-usuario"></span> 👋</h2>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h3>Actualizar mi Lista de Regalos</h3>
+                <textarea id="panel-deseos" placeholder="Escribe o actualiza tu lista de deseos..."></textarea>
+                
+                <label for="panel-foto" style="font-size: 14px; color: #666; display: block; margin-top: 10px;">Subir o cambiar foto de referencia:</label>
+                <input type="file" id="panel-foto" accept="image/*">
+                
+                <button onclick="guardarDeseos()" style="margin-top: 10px; background: #ffc107; color: #000;">Guardar Cambios</button>
+            </div>
+
+            <div style="background: #e9ecef; padding: 15px; border-radius: 8px;">
+                <h3>Mi Amigo Secreto Asignado</h3>
+                <div id="panel-resultado">El sorteo aún no se ha realizado.</div>
+            </div>
+
+            <button onclick="cerrarSesion()" style="margin-top: 20px; background: #dc3545;">Cerrar Sesión</button>
+        </div>
+
+        <!-- SECCIÓN 4: PANEL DE ADMINISTRACIÓN (Para realizar el sorteo) -->
         <div class="card admin-section">
             <h2>Panel de Administración</h2>
             <button onclick="realizarSorteo()" class="btn-admin">Realizar Sorteo Aleatorio</button>
