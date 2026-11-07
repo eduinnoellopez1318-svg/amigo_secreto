@@ -303,6 +303,7 @@ function cerrarAdmin() {
     document.getElementById('admin-pin').value = '';
     document.getElementById('card-admin-panel').style.display = 'none';
     document.getElementById('card-admin-login').style.display = 'block';
+    document.getElementById('lista-participantes-admin').innerHTML = ''; // Limpiar lista al salir
 }
 
 async function realizarSorteo() {
@@ -366,24 +367,47 @@ async function toggleInscripciones() {
     }
 }
 
-// --- FUNCIÓN CON DOBLE CONFIRMACIÓN PARA BORRAR TODO EL SORTEO ---
+// NUEVA FUNCIÓN: Ver lista de participantes inscritos
+async function verParticipantes() {
+    const { data: participantes, error } = await supabaseClient
+        .from('amigos')
+        .select('nombre, deseos');
+
+    const contenedor = document.getElementById('lista-participantes-admin');
+
+    if (error) {
+        contenedor.innerHTML = '<p style="color:red;">Error al cargar participantes.</p>';
+        return;
+    }
+
+    if (!participantes || participantes.length === 0) {
+        contenedor.innerHTML = '<p style="color:#666;">No hay participantes inscritos todavía.</p>';
+        return;
+    }
+
+    let html = `<strong>Total inscritos: (${participantes.length})</strong><ul style="margin: 5px 0; padding-left: 20px; text-align: left; max-height: 150px; overflow-y: auto;">`;
+    participantes.forEach(p => {
+        let tieneDeseos = p.deseos && p.deseos.trim() !== '' ? '✅ Con lista' : '⚠️ Sin lista';
+        html += `<li style="font-size: 14px; margin-bottom: 4px;"><strong>${p.nombre.toUpperCase()}</strong> <span style="font-size:12px; color:#666;">(${tieneDeseos})</span></li>`;
+    });
+    html += '</ul>';
+
+    contenedor.innerHTML = html;
+}
+
 async function reiniciarTodoSorteo() {
-    // Primera confirmación
     const confirmar1 = confirm('⚠️ ADVERTENCIA: ¿Estás seguro de que deseas eliminar TODOS los participantes, listas de deseos y reiniciar el sorteo por completo?');
     if (!confirmar1) return;
 
-    // Segunda confirmación estricta
     const confirmar2 = confirm('🔴 ÚLTIMA ADVERTENCIA: Esta acción no se puede deshacer. Se borrará toda la base de datos del sorteo. ¿Deseas continuar?');
     if (!confirmar2) return;
 
     try {
-        // Borrar todos los registros de la tabla amigos
         const { error: errorAmigos } = await supabaseClient
             .from('amigos')
             .delete()
-            .neq('id', 0); // Borra todas las filas
+            .neq('id', 0);
 
-        // Reabrir inscripciones automáticamente borrando la configuración o poniéndolas en falso
         await supabaseClient
             .from('configuracion')
             .upsert([{ clave: 'inscripciones_cerradas', valor: 'false' }], { onConflict: ['clave'] });
@@ -392,7 +416,7 @@ async function reiniciarTodoSorteo() {
             alert('Hubo un error al limpiar los datos: ' + errorAmigos.message);
         } else {
             alert('✨ ¡El sorteo se ha reiniciado y borrado por completo con éxito!');
-            location.reload(); // Recarga la página para dejarla limpia
+            location.reload();
         }
     } catch (e) {
         alert('Error inesperado al reiniciar: ' + e.message);
