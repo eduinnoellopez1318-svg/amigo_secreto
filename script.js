@@ -1,7 +1,7 @@
-// Configuración de Supabase (Tus credenciales reales)
+// Configuración de Supabase
 const SUPABASE_URL = 'https://ipiqgkosdnajgrkouili.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8'; // Coloca tu llave publishable completa aquí
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function registrarParticipante() {
     const nombre = document.getElementById('nombre').value.trim();
@@ -13,7 +13,7 @@ async function registrarParticipante() {
         return;
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('amigos')
         .insert([{ nombre, deseos, pin }]);
 
@@ -28,7 +28,7 @@ async function registrarParticipante() {
 }
 
 async function realizarSorteo() {
-    const { data: participantes, error } = await supabase.from('amigos').select('*');
+    const { data: participantes, error } = await supabaseClient.from('amigos').select('*');
     
     if (error || participantes.length < 2) {
         alert('Se necesitan al menos 2 participantes para hacer el sorteo.');
@@ -54,7 +54,7 @@ async function realizarSorteo() {
         const participanteId = participantes[i].id;
         const amigoAsignado = asignados[i];
 
-        await supabase
+        await supabaseClient
             .from('amigos')
             .update({ amigo_asignado: amigoAsignado })
             .eq('id', participanteId);
@@ -73,7 +73,7 @@ async function consultarResultado() {
         return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('amigos')
         .select('*')
         .eq('nombre', nombre)
@@ -90,7 +90,7 @@ async function consultarResultado() {
         return;
     }
 
-    const { data: amigoData } = await supabase
+    const { data: amigoData } = await supabaseClient
         .from('amigos')
         .select('deseos')
         .eq('nombre', data.amigo_asignado)
