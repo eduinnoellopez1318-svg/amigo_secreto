@@ -422,3 +422,14 @@ async function reiniciarTodoSorteo() {
         alert('Error inesperado al reiniciar: ' + e.message);
     }
 }
+// Funciones para mostrar u ocultar el acceso de administración discretamente
+function mostrarAdminLogin(event) {
+    event.preventDefault();
+    document.getElementById('card-admin-login').style.display = 'block';
+}
+
+function ocultarAdminLogin() {
+    document.getElementById('admin-pin').value = '';
+    document.getElementById('card-admin-login').style.display = 'none';
+}
+}
