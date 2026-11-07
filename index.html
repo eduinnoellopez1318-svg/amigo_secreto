@@ -12,7 +12,7 @@
     <div class="container">
         <h1>🎄 Sorteo Amigo Secreto 🎁</h1>
         
-        <!-- SECCIÓN 1: REGISTRO INICIAL (Se oculta si el admin cierra inscripciones) -->
+        <!-- SECCIÓN 1: REGISTRO INICIAL -->
         <div class="card" id="card-registro">
             <h2>Regístrate al Sorteo</h2>
             <p style="font-size: 14px; color: #666;">Inscríbete primero. Después podrás agregar tu lista de regalos.</p>
@@ -57,14 +57,15 @@
             <button onclick="cerrarSesion()" style="margin-top: 20px; background: #dc3545;">Cerrar Sesión</button>
         </div>
 
-        <!-- SECCIÓN 4: ACCESO ADMIN -->
-        <div class="card" id="card-admin-login">
+        <!-- SECCIÓN 4: ACCESO ADMIN (Oculto por defecto) -->
+        <div class="card" id="card-admin-login" style="display: none;">
             <h2>Panel de Administración</h2>
             <input type="password" id="admin-pin" placeholder="PIN de Administrador">
             <button onclick="ingresarAdmin()" class="btn-admin">Entrar como Admin</button>
+            <button onclick="ocultarAdminLogin()" style="background: #6c757d; margin-top: 10px;">Cancelar</button>
         </div>
 
-<!-- SECCIÓN 5: PANEL DE CONTROL ADMIN -->
+        <!-- SECCIÓN 5: PANEL DE CONTROL ADMIN (Oculto) -->
         <div class="card" id="card-admin-panel" style="display: none; background: #fff3cd; border: 1px solid #ffeeba;">
             <h2>⚙️ Control de Administrador</h2>
             <p style="font-size: 14px; color: #856404;">Aquí puedes gestionar el estado del sorteo.</p>
@@ -76,6 +77,11 @@
             <button onclick="toggleInscripciones()" id="btn-toggle-inscripciones" style="background: #dc3545; margin-bottom: 10px;">Cerrar / Abrir Inscripciones</button>
             <button onclick="reiniciarTodoSorteo()" style="background: #343a40; margin-bottom: 10px; color: #ffc107; border: 1px dashed #ffc107;">🗑️ Borrar y Reiniciar Todo el Sorteo</button>
             <button onclick="cerrarAdmin()" style="background: #6c757d;">Salir de Admin</button>
+        </div>
+
+        <!-- Enlace discreto para mostrar el acceso de administrador -->
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="#" onclick="mostrarAdminLogin(event)" style="color: #adb5bd; font-size: 12px; text-decoration: none;">⚙️ Panel Admin</a>
         </div>
     </div>
 
