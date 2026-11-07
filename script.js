@@ -4,6 +4,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let usuarioActual = null;
+let listaArchivosSeleccionados = []; // Arreglo para acumular las fotos seleccionadas una por una
 
 function mostrarSeccion(tipo) {
     document.getElementById('card-registro').style.display = 'none';
@@ -78,73 +79,92 @@ async function ingresarPanel() {
     usuarioActual = data;
     document.getElementById('span-nombre-usuario').innerText = data.nombre;
     
-    // Limpiar texto de deseos quitando etiquetas de fotos guardadas
+    // Limpiar texto de deseos y recuperar fotos ya guardadas si las hay
     let textoDeseos = data.deseos || '';
+    listaArchivosSeleccionados = []; // Reiniciar acumulador
+    
     if (textoDeseos.includes('[Fotos:')) {
-        textoDeseos = textoDeseos.split('[Fotos:')[0].trim();
+        const partes = textoDeseos.split('[Fotos:');
+        textoDeseos = partes[0].trim();
+        try {
+            const urlsGuardadas = JSON.parse(partes[1].replace(']', '').trim());
+            // Si ya tiene fotos en la base de datos, las cargamos como URLs existentes en la vista previa
+            urlsGuardadas.forEach(url => {
+                listaArchivosSeleccionados.push({ tipo: 'url', valor: url });
+            });
+        } catch (e) {}
     }
-    document.getElementById('panel-deseos').value = textoDeseos;
-    document.getElementById('grid-previsualizacion').innerHTML = '';
-    document.getElementById('panel-fotos').value = '';
 
+    document.getElementById('panel-deseos').value = textoDeseos;
+    actualizarVistaPrevia();
     verificarResultadoPanel();
     mostrarSeccion('panel');
 }
 
-// Previsualizar las imágenes seleccionadas antes de guardar
+// Función para ir acumulando las fotos seleccionadas una por una (máximo 5)
 function previsualizarFotos(event) {
     const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+        if (listaArchivosSeleccionados.length >= 5) {
+            alert('Has alcanzado el límite máximo de 5 imágenes.');
+            break;
+        }
+        // Agregamos el archivo nuevo a la lista acumulada
+        listaArchivosSeleccionados.push({ tipo: 'file', valor: files[i] });
+    }
+
+    // Limpiamos el input para permitir seleccionar otra imagen de nuevo
+    event.target.value = '';
+    actualizarVistaPrevia();
+}
+
+// Eliminar una foto de la lista antes de guardar
+function eliminarFoto(index) {
+    listaArchivosSeleccionados.splice(index, 1);
+    actualizarVistaPrevia();
+}
+
+// Renderizar las tarjetas en pantalla
+function actualizarVistaPrevia() {
     const grid = document.getElementById('grid-previsualizacion');
     grid.innerHTML = '';
 
-    if (files.length > 5) {
-        alert('Solo puedes seleccionar un máximo de 5 imágenes.');
-        document.getElementById('panel-fotos').value = '';
-        return;
-    }
+    listaArchivosSeleccionados.forEach((item, index) => {
+        const tarjeta = document.createElement('div');
+        tarjeta.className = 'tarjeta-img';
 
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-            const tarjeta = document.createElement('div');
-            tarjeta.className = 'tarjeta-img';
-            tarjeta.innerHTML = `<img src="${e.target.result}"><span style="font-size:11px; color:#666;">Foto ${i+1}</span>`;
-            grid.appendChild(tarjeta);
+        let imageSrc = '';
+        if (item.tipo === 'url') {
+            imageSrc = item.valor;
+        } else {
+            imageSrc = URL.createObjectURL(item.valor);
         }
-        reader.readAsDataURL(file);
-    }
+
+        tarjeta.innerHTML = `
+            <img src="${imageSrc}">
+            <span style="font-size:11px; display:block; margin:2px 0;">Foto ${index + 1}</span>
+            <button type="button" onclick="eliminarFoto(${index})" style="background:#dc3545; color:#white; border:none; border-radius:4px; padding:2px 5px; font-size:10px; cursor:pointer; width:100%;">Eliminar</button>
+        `;
+        grid.appendChild(tarjeta);
+    });
 }
 
 async function guardarDeseos() {
     const deseosTexto = document.getElementById('panel-deseos').value.trim();
-    const archivoInput = document.getElementById('panel-fotos');
-    let urlsFotos = [];
+    let urlsFinales = [];
 
-    // Extraer URLs de fotos ya guardadas previamente si existen
-    let deseosOriginales = usuarioActual.deseos || '';
-    if (deseosOriginales.includes('[Fotos:')) {
-        const match = deseosOriginales.match(/\[Fotos: ((.*?)\])/);
-        if (match) {
-            try {
-                urlsFotos = JSON.parse(match[1]);
-            } catch (e) {
-                urlsFotos = [];
-            }
-        }
-    }
+    // Procesar cada elemento de la lista acumulada
+    for (let i = 0; i < listaArchivosSeleccionados.length; i++) {
+        const item = listaArchivosSeleccionados[i];
 
-    // Subir nuevas fotos seleccionadas
-    if (archivoInput.files.length > 0) {
-        if (archivoInput.files.length > 5) {
-            alert('El límite máximo es de 5 imágenes.');
-            return;
-        }
-
-        urlsFotos = []; // Sobrescribir con las nuevas seleccionadas
-        for (let i = 0; i < archivoInput.files.length; i++) {
-            const archivo = archivoInput.files[i];
+        if (item.tipo === 'url') {
+            // Si ya era una URL existente en la nube, la conservamos
+            urlsFinales.push(item.valor);
+        } else {
+            // Si es un archivo nuevo seleccionado desde el celular/PC, lo subimos a Supabase
+            const archivo = item.valor;
             const nombreArchivo = `${Date.now()}_${i}_${archivo.name}`;
 
             const { error: uploadError } = await supabaseClient.storage
@@ -160,11 +180,11 @@ async function guardarDeseos() {
                 .from('regalos')
                 .getPublicUrl(nombreArchivo);
 
-            urlsFotos.push(publicURLData.publicUrl);
+            urlsFinales.push(publicURLData.publicUrl);
         }
     }
 
-    const deseosFinales = deseosTexto + (urlsFotos.length > 0 ? ` \n[Fotos: ${JSON.stringify(urlsFotos)}]` : '');
+    const deseosFinales = deseosTexto + (urlsFinales.length > 0 ? ` \n[Fotos: ${JSON.stringify(urlsFinales)}]` : '');
 
     const { error } = await supabaseClient
         .from('amigos')
@@ -175,6 +195,9 @@ async function guardarDeseos() {
         alert('Error al actualizar: ' + error.message);
     } else {
         usuarioActual.deseos = deseosFinales;
+        // Actualizamos la lista local para reflejar las URLs ya subidas
+        listaArchivosSeleccionados = urlsFinales.map(url => ({ tipo: 'url', valor: url }));
+        actualizarVistaPrevia();
         alert('¡Lista de deseos y fotos guardadas con éxito!');
     }
 }
@@ -216,10 +239,10 @@ async function verificarResultadoPanel() {
 
 function cerrarSesion() {
     usuarioActual = null;
+    listaArchivosSeleccionados = [];
     document.getElementById('login-nombre').value = '';
     document.getElementById('login-pin').value = '';
     document.getElementById('panel-deseos').value = '';
-    document.getElementById('panel-fotos').value = '';
     document.getElementById('grid-previsualizacion').innerHTML = '';
     mostrarSeccion('consulta');
 }
