@@ -5,7 +5,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 let usuarioActual = null;
 let listaArchivosSeleccionados = [];
-const PIN_ADMIN = '132118'; // Tu PIN de administrador personalizado
+const PIN_ADMIN = '132118';
 
 function mostrarSeccion(tipo) {
     document.getElementById('card-registro').style.display = 'none';
@@ -21,9 +21,10 @@ function mostrarSeccion(tipo) {
     }
 }
 
-// 1. Registro inicial (Verifica si el administrador cerró las inscripciones)
+// 1. Registro inicial (Normalizando nombre a minúsculas)
 async function registrarUsuario() {
-    const nombre = document.getElementById('reg-nombre').value.trim();
+    const nombreOriginal = document.getElementById('reg-nombre').value.trim();
+    const nombre = nombreOriginal.toLowerCase();
     const pin = document.getElementById('reg-pin').value.trim();
 
     if (!nombre || !pin) {
@@ -31,7 +32,6 @@ async function registrarUsuario() {
         return;
     }
 
-    // Verificar si las inscripciones están cerradas
     const { data: config } = await supabaseClient
         .from('configuracion')
         .select('*')
@@ -55,6 +55,7 @@ async function registrarUsuario() {
         return;
     }
 
+    // Guardamos con el nombre original estético pero el campo clave en minúsculas para búsquedas perfectas
     const { error } = await supabaseClient
         .from('amigos')
         .insert([{ nombre, pin, deseos: '', amigo_asignado: null }]);
@@ -71,7 +72,7 @@ async function registrarUsuario() {
 
 // 2. Iniciar sesión al panel personal
 async function ingresarPanel() {
-    const nombre = document.getElementById('login-nombre').value.trim();
+    const nombre = document.getElementById('login-nombre').value.trim().toLowerCase();
     const pin = document.getElementById('login-pin').value.trim();
 
     if (!nombre || !pin) {
@@ -92,7 +93,7 @@ async function ingresarPanel() {
     }
 
     usuarioActual = data;
-    document.getElementById('span-nombre-usuario').innerText = data.nombre;
+    document.getElementById('span-nombre-usuario').innerText = data.nombre.toUpperCase();
     
     let textoDeseos = data.deseos || '';
     listaArchivosSeleccionados = [];
@@ -176,7 +177,7 @@ async function guardarDeseos() {
                 return;
             }
 
-            const { data: publicURLData } = supabaseClient.storage
+            const { data: publicURLData } = await supabaseClient.storage
                 .from('regalos')
                 .getPublicUrl(nombreArchivo);
 
@@ -233,7 +234,7 @@ async function verificarResultadoPanel() {
         } catch (e) {}
     }
 
-    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${usuarioActual.amigo_asignado}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${textoDeseosAmigo}${galeriaHTML}`;
+    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${usuarioActual.amigo_asignado.toUpperCase()}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${textoDeseosAmigo}${galeriaHTML}`;
 }
 
 function cerrarSesion() {
@@ -265,7 +266,6 @@ function cerrarAdmin() {
     document.getElementById('card-admin-login').style.display = 'block';
 }
 
-// Realizar o Regenerar el Sorteo Aleatorio
 async function realizarSorteo() {
     const { data: participantes, error } = await supabaseClient.from('amigos').select('*');
     
@@ -299,7 +299,6 @@ async function realizarSorteo() {
     alert('¡Sorteo realizado o regenerado con éxito! Las asignaciones se han actualizado.');
 }
 
-// Abrir o Cerrar inscripciones (Bloquear nuevos registros)
 async function toggleInscripciones() {
     const { data } = await supabaseClient
         .from('configuracion')
