@@ -63,14 +63,13 @@ button:hover {
 }
 
 .btn-admin {
-    background-color: #007bff;
+    background-color: #343a40;
 }
 
-/* Estilo de tarjetas para las imágenes */
 .grid-tarjetas {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
     margin-top: 10px;
 }
 
@@ -80,20 +79,13 @@ button:hover {
     border-radius: 8px;
     padding: 5px;
     text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .tarjeta-img img {
     width: 100%;
-    height: 90px;
+    height: 80px;
     object-fit: cover;
-    border-radius: 5px;
-}
-
-.resultado img {
-    max-width: 100%;
-    border-radius: 8px;
-    margin-top: 5px;
+    border-radius: 4px;
 }
 
 .contenedor-galeria {
@@ -104,7 +96,7 @@ button:hover {
 }
 
 .item-galeria {
-    width: 110px;
+    width: 100px;
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -114,7 +106,7 @@ button:hover {
 
 .item-galeria img {
     width: 100%;
-    height: 90px;
+    height: 80px;
     object-fit: cover;
     border-radius: 4px;
 }
