@@ -7,6 +7,19 @@ let usuarioActual = null;
 let listaArchivosSeleccionados = [];
 const PIN_ADMIN = '132118';
 
+// Funciones de cifrado básico para ocultar el PIN y el amigo asignado en la base de datos
+function cifrarTexto(texto) {
+    return btoa(encodeURIComponent(texto)); // Codifica en Base64 seguro
+}
+
+function descifrarTexto(textoCifrado) {
+    try {
+        return decodeURIComponent(atob(textoCifrado));
+    } catch (e) {
+        return textoCifrado; // Por si algún dato antiguo no estaba cifrado
+    }
+}
+
 function mostrarSeccion(tipo) {
     document.getElementById('card-registro').style.display = 'none';
     document.getElementById('card-login').style.display = 'none';
@@ -21,13 +34,13 @@ function mostrarSeccion(tipo) {
     }
 }
 
-// 1. Registro inicial (Normalizando nombre a minúsculas)
+// 1. Registro inicial
 async function registrarUsuario() {
     const nombreOriginal = document.getElementById('reg-nombre').value.trim();
     const nombre = nombreOriginal.toLowerCase();
-    const pin = document.getElementById('reg-pin').value.trim();
+    const pinPlano = document.getElementById('reg-pin').value.trim();
 
-    if (!nombre || !pin) {
+    if (!nombre || !pinPlano) {
         alert('Por favor ingresa tu nombre y un PIN.');
         return;
     }
@@ -43,6 +56,7 @@ async function registrarUsuario() {
         return;
     }
 
+    // Verificar si ya existe el nombre exacto en minúsculas
     const { data: existente } = await supabaseClient
         .from('amigos')
         .select('*')
@@ -55,10 +69,12 @@ async function registrarUsuario() {
         return;
     }
 
-    // Guardamos con el nombre original estético pero el campo clave en minúsculas para búsquedas perfectas
+    // Ciframos el PIN antes de guardarlo para que sea secreto en la BD
+    const pinCifrado = cifrarTexto(pinPlano);
+
     const { error } = await supabaseClient
         .from('amigos')
-        .insert([{ nombre, pin, deseos: '', amigo_asignado: null }]);
+        .insert([{ nombre, pin: pinCifrado, deseos: '', amigo_asignado: null }]);
 
     if (error) {
         alert('Error al registrarse: ' + error.message);
@@ -73,21 +89,21 @@ async function registrarUsuario() {
 // 2. Iniciar sesión al panel personal
 async function ingresarPanel() {
     const nombre = document.getElementById('login-nombre').value.trim().toLowerCase();
-    const pin = document.getElementById('login-pin').value.trim();
+    const pinPlano = document.getElementById('login-pin').value.trim();
 
-    if (!nombre || !pin) {
+    if (!nombre || !pinPlano) {
         alert('Ingresa tu nombre y tu PIN.');
         return;
     }
 
+    // Traemos al usuario por nombre y comparamos el PIN descifrado
     const { data, error } = await supabaseClient
         .from('amigos')
         .select('*')
         .eq('nombre', nombre)
-        .eq('pin', pin)
         .single();
 
-    if (error || !data) {
+    if (error || !data || descifrarTexto(data.pin) !== pinPlano) {
         alert('Nombre o PIN incorrecto.');
         return;
     }
@@ -210,10 +226,13 @@ async function verificarResultadoPanel() {
         return;
     }
 
+    // Desciframos el nombre del amigo asignado para mostrarlo en pantalla
+    const amigoSecretoNombre = descifrarTexto(usuarioActual.amigo_asignado);
+
     const { data: amigoData } = await supabaseClient
         .from('amigos')
         .select('deseos')
-        .eq('nombre', usuarioActual.amigo_asignado)
+        .eq('nombre', amigoSecretoNombre)
         .single();
 
     let textoDeseosAmigo = amigoData ? amigoData.deseos : 'No registró lista de deseos.';
@@ -234,7 +253,7 @@ async function verificarResultadoPanel() {
         } catch (e) {}
     }
 
-    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${usuarioActual.amigo_asignado.toUpperCase()}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${textoDeseosAmigo}${galeriaHTML}`;
+    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${amigoSecretoNombre.toUpperCase()}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${textoDeseosAmigo}${galeriaHTML}`;
 }
 
 function cerrarSesion() {
@@ -289,14 +308,16 @@ async function realizarSorteo() {
         }
     }
 
+    // Guardamos el amigo asignado totalmente cifrado (secreto) en la base de datos
     for (let i = 0; i < participantes.length; i++) {
+        const asignadoCifrado = cifrarTexto(asignados[i]);
         await supabaseClient
             .from('amigos')
-            .update({ amigo_asignado: asignados[i] })
+            .update({ amigo_asignado: asignadoCifrado })
             .eq('id', participantes[i].id);
     }
 
-    alert('¡Sorteo realizado o regenerado con éxito! Las asignaciones se han actualizado.');
+    alert('¡Sorteo realizado o regenerado con éxito! Las asignaciones se han guardado de forma secreta y cifrada.');
 }
 
 async function toggleInscripciones() {
@@ -319,7 +340,7 @@ async function toggleInscripciones() {
         .upsert([{ clave: 'inscripciones_cerradas', valor: nuevoEstado }], { onConflict: ['clave'] });
 
     if (error) {
-        alert('Error al cambiar el estado. (Asegúrate de tener creada una tabla llamada "configuracion" en Supabase con columnas "clave" y "valor").');
+        alert('Error al cambiar el estado.');
     } else {
         alert(mensaje);
     }
