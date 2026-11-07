@@ -4,7 +4,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let usuarioActual = null;
-let listaArchivosSeleccionados = []; // Arreglo para acumular las fotos seleccionadas una por una
+let listaArchivosSeleccionados = [];
+const PIN_ADMIN = '132118'; // Tu PIN de administrador personalizado
 
 function mostrarSeccion(tipo) {
     document.getElementById('card-registro').style.display = 'none';
@@ -20,12 +21,25 @@ function mostrarSeccion(tipo) {
     }
 }
 
+// 1. Registro inicial (Verifica si el administrador cerró las inscripciones)
 async function registrarUsuario() {
     const nombre = document.getElementById('reg-nombre').value.trim();
     const pin = document.getElementById('reg-pin').value.trim();
 
     if (!nombre || !pin) {
         alert('Por favor ingresa tu nombre y un PIN.');
+        return;
+    }
+
+    // Verificar si las inscripciones están cerradas
+    const { data: config } = await supabaseClient
+        .from('configuracion')
+        .select('*')
+        .eq('clave', 'inscripciones_cerradas')
+        .single();
+
+    if (config && config.valor === 'true') {
+        alert('Lo sentimos, las inscripciones ya han sido cerradas por el administrador.');
         return;
     }
 
@@ -55,6 +69,7 @@ async function registrarUsuario() {
     }
 }
 
+// 2. Iniciar sesión al panel personal
 async function ingresarPanel() {
     const nombre = document.getElementById('login-nombre').value.trim();
     const pin = document.getElementById('login-pin').value.trim();
@@ -79,16 +94,14 @@ async function ingresarPanel() {
     usuarioActual = data;
     document.getElementById('span-nombre-usuario').innerText = data.nombre;
     
-    // Limpiar texto de deseos y recuperar fotos ya guardadas si las hay
     let textoDeseos = data.deseos || '';
-    listaArchivosSeleccionados = []; // Reiniciar acumulador
+    listaArchivosSeleccionados = [];
     
     if (textoDeseos.includes('[Fotos:')) {
         const partes = textoDeseos.split('[Fotos:');
         textoDeseos = partes[0].trim();
         try {
             const urlsGuardadas = JSON.parse(partes[1].replace(']', '').trim());
-            // Si ya tiene fotos en la base de datos, las cargamos como URLs existentes en la vista previa
             urlsGuardadas.forEach(url => {
                 listaArchivosSeleccionados.push({ tipo: 'url', valor: url });
             });
@@ -101,7 +114,6 @@ async function ingresarPanel() {
     mostrarSeccion('panel');
 }
 
-// Función para ir acumulando las fotos seleccionadas una por una (máximo 5)
 function previsualizarFotos(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -111,22 +123,18 @@ function previsualizarFotos(event) {
             alert('Has alcanzado el límite máximo de 5 imágenes.');
             break;
         }
-        // Agregamos el archivo nuevo a la lista acumulada
         listaArchivosSeleccionados.push({ tipo: 'file', valor: files[i] });
     }
 
-    // Limpiamos el input para permitir seleccionar otra imagen de nuevo
     event.target.value = '';
     actualizarVistaPrevia();
 }
 
-// Eliminar una foto de la lista antes de guardar
 function eliminarFoto(index) {
     listaArchivosSeleccionados.splice(index, 1);
     actualizarVistaPrevia();
 }
 
-// Renderizar las tarjetas en pantalla
 function actualizarVistaPrevia() {
     const grid = document.getElementById('grid-previsualizacion');
     grid.innerHTML = '';
@@ -135,17 +143,12 @@ function actualizarVistaPrevia() {
         const tarjeta = document.createElement('div');
         tarjeta.className = 'tarjeta-img';
 
-        let imageSrc = '';
-        if (item.tipo === 'url') {
-            imageSrc = item.valor;
-        } else {
-            imageSrc = URL.createObjectURL(item.valor);
-        }
+        let imageSrc = item.tipo === 'url' ? item.valor : URL.createObjectURL(item.valor);
 
         tarjeta.innerHTML = `
             <img src="${imageSrc}">
-            <span style="font-size:11px; display:block; margin:2px 0;">Foto ${index + 1}</span>
-            <button type="button" onclick="eliminarFoto(${index})" style="background:#dc3545; color:#white; border:none; border-radius:4px; padding:2px 5px; font-size:10px; cursor:pointer; width:100%;">Eliminar</button>
+            <span style="font-size:10px; display:block; margin:2px 0;">Foto ${index + 1}</span>
+            <button type="button" onclick="eliminarFoto(${index})" style="background:#dc3545; color:white; border:none; border-radius:4px; padding:2px; font-size:10px; cursor:pointer; width:100%;">Eliminar</button>
         `;
         grid.appendChild(tarjeta);
     });
@@ -155,15 +158,12 @@ async function guardarDeseos() {
     const deseosTexto = document.getElementById('panel-deseos').value.trim();
     let urlsFinales = [];
 
-    // Procesar cada elemento de la lista acumulada
     for (let i = 0; i < listaArchivosSeleccionados.length; i++) {
         const item = listaArchivosSeleccionados[i];
 
         if (item.tipo === 'url') {
-            // Si ya era una URL existente en la nube, la conservamos
             urlsFinales.push(item.valor);
         } else {
-            // Si es un archivo nuevo seleccionado desde el celular/PC, lo subimos a Supabase
             const archivo = item.valor;
             const nombreArchivo = `${Date.now()}_${i}_${archivo.name}`;
 
@@ -195,7 +195,6 @@ async function guardarDeseos() {
         alert('Error al actualizar: ' + error.message);
     } else {
         usuarioActual.deseos = deseosFinales;
-        // Actualizamos la lista local para reflejar las URLs ya subidas
         listaArchivosSeleccionados = urlsFinales.map(url => ({ tipo: 'url', valor: url }));
         actualizarVistaPrevia();
         alert('¡Lista de deseos y fotos guardadas con éxito!');
@@ -247,6 +246,26 @@ function cerrarSesion() {
     mostrarSeccion('consulta');
 }
 
+// --- FUNCIONES DE ADMINISTRACIÓN ---
+
+function ingresarAdmin() {
+    const pinIngresado = document.getElementById('admin-pin').value.trim();
+    if (pinIngresado === PIN_ADMIN) {
+        document.getElementById('card-admin-login').style.display = 'none';
+        document.getElementById('card-admin-panel').style.display = 'block';
+        alert('¡Bienvenido al panel de administración!');
+    } else {
+        alert('PIN de administrador incorrecto.');
+    }
+}
+
+function cerrarAdmin() {
+    document.getElementById('admin-pin').value = '';
+    document.getElementById('card-admin-panel').style.display = 'none';
+    document.getElementById('card-admin-login').style.display = 'block';
+}
+
+// Realizar o Regenerar el Sorteo Aleatorio
 async function realizarSorteo() {
     const { data: participantes, error } = await supabaseClient.from('amigos').select('*');
     
@@ -277,5 +296,32 @@ async function realizarSorteo() {
             .eq('id', participantes[i].id);
     }
 
-    alert('¡Sorteo realizado con éxito! Ya pueden entrar a su panel a consultar.');
+    alert('¡Sorteo realizado o regenerado con éxito! Las asignaciones se han actualizado.');
+}
+
+// Abrir o Cerrar inscripciones (Bloquear nuevos registros)
+async function toggleInscripciones() {
+    const { data } = await supabaseClient
+        .from('configuracion')
+        .select('*')
+        .eq('clave', 'inscripciones_cerradas')
+        .single();
+
+    let nuevoEstado = 'true';
+    let mensaje = 'Inscripciones CERRADAS. Nadie más podrá registrarse.';
+
+    if (data && data.valor === 'true') {
+        nuevoEstado = 'false';
+        mensaje = 'Inscripciones ABIERTAS nuevamente.';
+    }
+
+    const { error } = await supabaseClient
+        .from('configuracion')
+        .upsert([{ clave: 'inscripciones_cerradas', valor: nuevoEstado }], { onConflict: ['clave'] });
+
+    if (error) {
+        alert('Error al cambiar el estado. (Asegúrate de tener creada una tabla llamada "configuracion" en Supabase con columnas "clave" y "valor").');
+    } else {
+        alert(mensaje);
+    }
 }
