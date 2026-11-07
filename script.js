@@ -1,29 +1,81 @@
 // Configuración de Supabase
 const SUPABASE_URL = 'https://ipiqgkosdnajgrkouili.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8'; // Coloca tu llave publishable completa aquí
+const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function registrarParticipante() {
     const nombre = document.getElementById('nombre').value.trim();
     const deseos = document.getElementById('deseos').value.trim();
     const pin = document.getElementById('pin').value.trim();
+    const archivoInput = document.getElementById('foto');
 
     if (!nombre || !pin) {
         alert('Por favor ingresa tu nombre y un PIN.');
         return;
     }
 
-    const { error } = await supabaseClient
+    let fotoUrl = '';
+
+    // Si seleccionó una nueva foto, la subimos a Supabase Storage
+    if (archivoInput.files.length > 0) {
+        const archivo = archivoInput.files[0];
+        const nombreArchivo = `${Date.now()}_${archivo.name}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('regalos')
+            .upload(nombreArchivo, archivo);
+
+        if (uploadError) {
+            alert('Error al subir la imagen: ' + uploadError.message);
+            return;
+        }
+
+        const { data: publicURLData } = supabaseClient.storage
+            .from('regalos')
+            .getPublicUrl(nombreArchivo);
+
+        fotoUrl = publicURLData.publicUrl;
+    }
+
+    // 1. Verificar si el usuario ya existe con ese nombre y PIN
+    const { data: usuarioExistente } = await supabaseClient
         .from('amigos')
-        .insert([{ nombre, deseos, pin }]);
+        .select('*')
+        .eq('nombre', nombre)
+        .eq('pin', pin)
+        .single();
+
+    let error;
+
+    if (usuarioExistente) {
+        // SI YA EXISTE: Actualizamos su lista de deseos y foto
+        const nuevosDeseos = deseos + (fotoUrl ? ` \n[Foto de referencia: ${fotoUrl}]` : '');
+        
+        const res = await supabaseClient
+            .from('amigos')
+            .update({ deseos: nuevosDeseos })
+            .eq('id', usuarioExistente.id);
+        
+        error = res.error;
+    } else {
+        // SI ES NUEVO: Lo insertamos por primera vez
+        const nuevosDeseos = deseos + (fotoUrl ? ` \n[Foto de referencia: ${fotoUrl}]` : '');
+        
+        const res = await supabaseClient
+            .from('amigos')
+            .insert([{ nombre, deseos: nuevosDeseos, pin }]);
+        
+        error = res.error;
+    }
 
     if (error) {
-        alert('Hubo un error al registrarse: ' + error.message);
+        alert('Hubo un error al guardar: ' + error.message);
     } else {
-        alert('¡Registro exitoso!');
+        alert('¡Datos guardados / actualizados con éxito!');
         document.getElementById('nombre').value = '';
         document.getElementById('deseos').value = '';
         document.getElementById('pin').value = '';
+        document.getElementById('foto').value = '';
     }
 }
 
@@ -96,7 +148,11 @@ async function consultarResultado() {
         .eq('nombre', data.amigo_asignado)
         .single();
 
-    const listaDeseos = amigoData ? amigoData.deseos : 'No registró lista de deseos.';
+    let listaDeseos = amigoData ? amigoData.deseos : 'No registró lista de deseos.';
 
-    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${data.amigo_asignado}</strong><br>🎁 Su lista de deseos: <br><em>${listaDeseos}</em>`;
+    if (listaDeseos.includes('[Foto de referencia:')) {
+        listaDeseos = listaDeseos.replace(/\[Foto de referencia: (.*?)\]/g, '<br><br>📸 <strong>Foto de referencia:</strong><br><img src="$1" style="max-width:100%; border-radius:8px; margin-top:5px;">');
+    }
+
+    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${data.amigo_asignado}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${listaDeseos}`;
 }
