@@ -3,10 +3,8 @@ const SUPABASE_URL = 'https://ipiqgkosdnajgrkouili.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable__vTtg0nVjkfyzF2IM_FraA_blfW7dO8';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Variable global para recordar qué usuario ha iniciado sesión
 let usuarioActual = null;
 
-// Funciones para cambiar de vista (pestañas)
 function mostrarSeccion(tipo) {
     document.getElementById('card-registro').style.display = 'none';
     document.getElementById('card-login').style.display = 'none';
@@ -21,7 +19,6 @@ function mostrarSeccion(tipo) {
     }
 }
 
-// 1. Registro inicial (Solo nombre y PIN)
 async function registrarUsuario() {
     const nombre = document.getElementById('reg-nombre').value.trim();
     const pin = document.getElementById('reg-pin').value.trim();
@@ -31,7 +28,6 @@ async function registrarUsuario() {
         return;
     }
 
-    // Verificar si ya existe
     const { data: existente } = await supabaseClient
         .from('amigos')
         .select('*')
@@ -44,7 +40,6 @@ async function registrarUsuario() {
         return;
     }
 
-    // Insertar nuevo usuario vacío
     const { error } = await supabaseClient
         .from('amigos')
         .insert([{ nombre, pin, deseos: '', amigo_asignado: null }]);
@@ -59,7 +54,6 @@ async function registrarUsuario() {
     }
 }
 
-// 2. Iniciar sesión al panel personal
 async function ingresarPanel() {
     const nombre = document.getElementById('login-nombre').value.trim();
     const pin = document.getElementById('login-pin').value.trim();
@@ -84,55 +78,93 @@ async function ingresarPanel() {
     usuarioActual = data;
     document.getElementById('span-nombre-usuario').innerText = data.nombre;
     
-    // Cargar deseos actuales (separando texto limpio de la foto si la hay)
+    // Limpiar texto de deseos quitando etiquetas de fotos guardadas
     let textoDeseos = data.deseos || '';
-    if (textoDeseos.includes('[Foto de referencia:')) {
-        textoDeseos = textoDeseos.split('[Foto de referencia:')[0].trim();
+    if (textoDeseos.includes('[Fotos:')) {
+        textoDeseos = textoDeseos.split('[Fotos:')[0].trim();
     }
     document.getElementById('panel-deseos').value = textoDeseos;
+    document.getElementById('grid-previsualizacion').innerHTML = '';
+    document.getElementById('panel-fotos').value = '';
 
-    // Cargar estado del amigo secreto
     verificarResultadoPanel();
-
-    // Mostrar panel privado
     mostrarSeccion('panel');
 }
 
-// 3. Guardar / Actualizar deseos y foto en el panel personal
-async function guardarDeseos() {
-    const deseosTexto = document.getElementById('panel-deseos').value.trim();
-    const archivoInput = document.getElementById('panel-foto');
-    let fotoUrl = '';
+// Previsualizar las imágenes seleccionadas antes de guardar
+function previsualizarFotos(event) {
+    const files = event.target.files;
+    const grid = document.getElementById('grid-previsualizacion');
+    grid.innerHTML = '';
 
-    // Extraer foto anterior si existía en el texto guardado
-    let deseosOriginales = usuarioActual.deseos || '';
-    if (deseosOriginales.includes('[Foto de referencia:')) {
-        const match = deseosOriginales.match(/\[Foto de referencia: (.*?)\]/);
-        if (match) fotoUrl = match[1];
+    if (files.length > 5) {
+        alert('Solo puedes seleccionar un máximo de 5 imágenes.');
+        document.getElementById('panel-fotos').value = '';
+        return;
     }
 
-    // Si seleccionó una nueva foto, subirla
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const tarjeta = document.createElement('div');
+            tarjeta.className = 'tarjeta-img';
+            tarjeta.innerHTML = `<img src="${e.target.result}"><span style="font-size:11px; color:#666;">Foto ${i+1}</span>`;
+            grid.appendChild(tarjeta);
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+async function guardarDeseos() {
+    const deseosTexto = document.getElementById('panel-deseos').value.trim();
+    const archivoInput = document.getElementById('panel-fotos');
+    let urlsFotos = [];
+
+    // Extraer URLs de fotos ya guardadas previamente si existen
+    let deseosOriginales = usuarioActual.deseos || '';
+    if (deseosOriginales.includes('[Fotos:')) {
+        const match = deseosOriginales.match(/\[Fotos: ((.*?)\])/);
+        if (match) {
+            try {
+                urlsFotos = JSON.parse(match[1]);
+            } catch (e) {
+                urlsFotos = [];
+            }
+        }
+    }
+
+    // Subir nuevas fotos seleccionadas
     if (archivoInput.files.length > 0) {
-        const archivo = archivoInput.files[0];
-        const nombreArchivo = `${Date.now()}_${archivo.name}`;
-
-        const { error: uploadError } = await supabaseClient.storage
-            .from('regalos')
-            .upload(nombreArchivo, archivo);
-
-        if (uploadError) {
-            alert('Error al subir la imagen: ' + uploadError.message);
+        if (archivoInput.files.length > 5) {
+            alert('El límite máximo es de 5 imágenes.');
             return;
         }
 
-        const { data: publicURLData } = supabaseClient.storage
-            .from('regalos')
-            .getPublicUrl(nombreArchivo);
+        urlsFotos = []; // Sobrescribir con las nuevas seleccionadas
+        for (let i = 0; i < archivoInput.files.length; i++) {
+            const archivo = archivoInput.files[i];
+            const nombreArchivo = `${Date.now()}_${i}_${archivo.name}`;
 
-        fotoUrl = publicURLData.publicUrl;
+            const { error: uploadError } = await supabaseClient.storage
+                .from('regalos')
+                .upload(nombreArchivo, archivo);
+
+            if (uploadError) {
+                alert('Error al subir imagen: ' + uploadError.message);
+                return;
+            }
+
+            const { data: publicURLData } = supabaseClient.storage
+                .from('regalos')
+                .getPublicUrl(nombreArchivo);
+
+            urlsFotos.push(publicURLData.publicUrl);
+        }
     }
 
-    const deseosFinales = deseosTexto + (fotoUrl ? ` \n[Foto de referencia: ${fotoUrl}]` : '');
+    const deseosFinales = deseosTexto + (urlsFotos.length > 0 ? ` \n[Fotos: ${JSON.stringify(urlsFotos)}]` : '');
 
     const { error } = await supabaseClient
         .from('amigos')
@@ -143,11 +175,10 @@ async function guardarDeseos() {
         alert('Error al actualizar: ' + error.message);
     } else {
         usuarioActual.deseos = deseosFinales;
-        alert('¡Lista de deseos actualizada con éxito!');
+        alert('¡Lista de deseos y fotos guardadas con éxito!');
     }
 }
 
-// 4. Consultar a quién le debe regalar y ver los deseos de esa persona
 async function verificarResultadoPanel() {
     const divResultado = document.getElementById('panel-resultado');
 
@@ -156,33 +187,43 @@ async function verificarResultadoPanel() {
         return;
     }
 
-    // Buscar la lista de deseos del amigo asignado
     const { data: amigoData } = await supabaseClient
         .from('amigos')
         .select('deseos')
         .eq('nombre', usuarioActual.amigo_asignado)
         .single();
 
-    let listaDeseosAmigo = amigoData ? amigoData.deseos : 'No registró lista de deseos.';
+    let textoDeseosAmigo = amigoData ? amigoData.deseos : 'No registró lista de deseos.';
+    let galeriaHTML = '';
 
-    if (listaDeseosAmigo.includes('[Foto de referencia:')) {
-        listaDeseosAmigo = listaDeseosAmigo.replace(/\[Foto de referencia: (.*?)\]/g, '<br><br>📸 <strong>Foto de referencia:</strong><br><img src="$1" style="max-width:100%; border-radius:8px; margin-top:5px;">');
+    if (textoDeseosAmigo.includes('[Fotos:')) {
+        const partes = textoDeseosAmigo.split('[Fotos:');
+        textoDeseosAmigo = partes[0].trim();
+        try {
+            const urls = JSON.parse(partes[1].replace(']', '').trim());
+            if (urls.length > 0) {
+                galeriaHTML = '<br><br>📸 <strong>Fotos de referencia:</strong><div class="contenedor-galeria">';
+                urls.forEach((url, index) => {
+                    galeriaHTML += `<div class="item-galeria"><img src="${url}"><span style="font-size:11px;">Opción ${index+1}</span></div>`;
+                });
+                galeriaHTML += '</div>';
+            }
+        } catch (e) {}
     }
 
-    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${usuarioActual.amigo_asignado}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${listaDeseosAmigo}`;
+    divResultado.innerHTML = `🎉 Te tocó regalar a: <strong>${usuarioActual.amigo_asignado}</strong><br><br>🎁 <strong>Su lista de deseos:</strong><br>${textoDeseosAmigo}${galeriaHTML}`;
 }
 
-// 5. Cerrar sesión
 function cerrarSesion() {
     usuarioActual = null;
     document.getElementById('login-nombre').value = '';
     document.getElementById('login-pin').value = '';
     document.getElementById('panel-deseos').value = '';
-    document.getElementById('panel-foto').value = '';
+    document.getElementById('panel-fotos').value = '';
+    document.getElementById('grid-previsualizacion').innerHTML = '';
     mostrarSeccion('consulta');
 }
 
-// 6. Realizar sorteo (Administrador)
 async function realizarSorteo() {
     const { data: participantes, error } = await supabaseClient.from('amigos').select('*');
     
