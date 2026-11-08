@@ -283,6 +283,11 @@ function cerrarSesion() {
     document.getElementById('login-pin').value = '';
     document.getElementById('panel-deseos').value = '';
     document.getElementById('grid-previsualizacion').innerHTML = '';
+    
+    // Ocultar explícitamente el panel privado del usuario
+    document.getElementById('card-panel').style.display = 'none';
+    
+    // Volver a mostrar la pantalla correspondiente según el estado de las inscripciones
     verificarInscripcionesYMostrarRegistro();
 }
 
