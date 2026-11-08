@@ -5,7 +5,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 let usuarioActual = null;
 let listaArchivosSeleccionados = [];
-const PIN_ADMIN = '132118';
 
 function cifrarTexto(texto) {
     return btoa(encodeURIComponent(texto));
@@ -283,19 +282,25 @@ function cerrarSesion() {
     document.getElementById('login-pin').value = '';
     document.getElementById('panel-deseos').value = '';
     document.getElementById('grid-previsualizacion').innerHTML = '';
-    
-    // Ocultar explícitamente el panel privado del usuario
     document.getElementById('card-panel').style.display = 'none';
-    
-    // Volver a mostrar la pantalla correspondiente según el estado de las inscripciones
     verificarInscripcionesYMostrarRegistro();
 }
 
-// --- FUNCIONES DE ADMINISTRACIÓN ---
+// --- FUNCIONES DE ADMINISTRACIÓN (PIN DESDE SUPABASE) ---
 
-function ingresarAdmin() {
+async function ingresarAdmin() {
     const pinIngresado = document.getElementById('admin-pin').value.trim();
-    if (pinIngresado === PIN_ADMIN) {
+    
+    // Consultar el PIN seguro directamente desde la tabla configuracion
+    const { data: config, error } = await supabaseClient
+        .from('configuracion')
+        .select('*')
+        .eq('clave', 'pin_admin')
+        .single();
+
+    const pinReal = config ? config.valor : '132118'; // Respaldo por defecto
+
+    if (!error && pinIngresado === pinReal) {
         document.getElementById('card-admin-login').style.display = 'none';
         document.getElementById('card-admin-panel').style.display = 'block';
         alert('¡Bienvenido al panel de administración!');
