@@ -298,7 +298,7 @@ async function ingresarAdmin() {
         .eq('clave', 'pin_admin')
         .single();
 
-    const pinReal = config ? config.valor : '132118'; // Respaldo por defecto
+    const pinReal = config ? config.valor : '132118';
 
     if (!error && pinIngresado === pinReal) {
         document.getElementById('card-admin-login').style.display = 'none';
@@ -402,6 +402,34 @@ async function verParticipantes() {
     html += '</ul>';
 
     contenedor.innerHTML = html;
+}
+
+async function restablecerPinUsuario() {
+    const nombreBuscado = prompt('Ingresa el nombre exacto del participante:');
+    if (!nombreBuscado) return;
+
+    const nombreNormalizado = nombreBuscado.trim().toLowerCase();
+    const nuevoPin = prompt(`Ingresa el nuevo PIN para ${nombreNormalizado.toUpperCase()}:`);
+    if (!nuevoPin || !nuevoPin.trim()) {
+        alert('El PIN no puede estar vacío.');
+        return;
+    }
+
+    const pinCifrado = cifrarTexto(nuevoPin.trim());
+
+    const { data, error } = await supabaseClient
+        .from('amigos')
+        .update({ pin: pinCifrado })
+        .eq('nombre', nombreNormalizado)
+        .select();
+
+    if (error) {
+        alert('Error al actualizar el PIN: ' + error.message);
+    } else if (!data || data.length === 0) {
+        alert('No se encontró ningún participante con ese nombre.');
+    } else {
+        alert(`✅ PIN actualizado para ${nombreNormalizado.toUpperCase()}.`);
+    }
 }
 
 async function reiniciarTodoSorteo() {
